@@ -7,6 +7,12 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include <gmp.h>
+
+#define TRY_LITTLE_ENDIAN 1
+#define TRY_BIG_ENDIAN 2
+#define TRY_ALL_ENDIAN TRY_LITTLE_ENDIAN|TRY_BIG_ENDIAN
+
 void hexdump (char *info, void *addr, int len)
 {
     int i;
@@ -44,6 +50,20 @@ void hexdump (char *info, void *addr, int len)
     printf ("  %s\n", buff);
 }
 
+int find_numbers(uint8_t *data, size_t len, uint8_t align, uint8_t endian_flags)
+{
+    /* Temporary storage for bignum */
+    mpz_t n;
+    size_t i;
+
+    mpz_init(n);
+
+    for (i = 0; i < len; i+= align) {
+        /* use mpz_import to convert from raw data*/
+    }
+    
+    return 0;
+}
 
 int main(int argc, char *argv[])
 {
