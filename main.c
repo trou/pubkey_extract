@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <stdlib.h>
+#include <stddef.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -50,7 +51,7 @@ void hexdump (char *info, void *addr, int len)
     printf ("  %s\n", buff);
 }
 
-int find_numbers(uint8_t *data, size_t len, uint8_t align, uint8_t endian_flags)
+int find_numbers(uint8_t *data, size_t len, size_t bits, uint8_t align, uint8_t endian_flags)
 {
     /* Temporary storage for bignum */
     mpz_t n;
@@ -58,9 +59,21 @@ int find_numbers(uint8_t *data, size_t len, uint8_t align, uint8_t endian_flags)
 
     mpz_init(n);
 
-    for (i = 0; i < len; i+= align) {
+    for (i = 0; i <= (len-bits/8); i+= align) {
         /* use mpz_import to convert from raw data*/
+        /* Big endian : len bytes, MSB first, MSB first in each byte */
+        mpz_import(n, bits/8, 1, 1, 1, 0, data+i);
+
+        /* Check if the number is not full of zeros */
+        if (mpz_sizeinbase(n, 2) > (bits-2) ) {
+            if (mpz_probab_prime_p(n, 20) > 0) {
+            printf("Prime of %zd bits found at offset 0x%zx : ", bits, i);
+            mpz_out_str(stdout, 16, n);
+            printf("\n");
+            }
+        }
     }
+    mpz_clear(n);
     
     return 0;
 }
@@ -103,13 +116,16 @@ int main(int argc, char *argv[])
         res = 1;
         goto exit;
     }
+
     if(fread(data, 1, data_len, f) != (size_t)data_len) {
         printf("couldn't read data file\n");
         res = 1;
         goto exit;
     }
     fclose(f); f = NULL;
-    printf("Trying to find %d bits crypto numbers", bits);
+
+    printf("Trying to find %d bits crypto numbers\n", bits);
+    find_numbers(data, data_len, bits, 1, 0);
 
     
 
