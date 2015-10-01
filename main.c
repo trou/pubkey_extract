@@ -51,6 +51,21 @@ void hexdump (char *info, void *addr, int len)
     printf ("  %s\n", buff);
 }
 
+void number_checks(mpz_t n, size_t bits, size_t offset)
+{
+    /* Check if the number is not full of zeros */
+    if (mpz_sizeinbase(n, 2) > (bits-2) ) {
+        /* Is it prime ? */
+        if (mpz_probab_prime_p(n, 20) > 0) {
+            printf("Prime of %zd bits found at offset 0x%zx : ", mpz_sizeinbase(n, 2), offset);
+            mpz_out_str(stdout, 16, n);
+            printf("\n");
+        }
+    }
+
+    return;
+}
+
 int find_numbers(uint8_t *data, size_t len, size_t bits, uint8_t align, uint8_t endian_flags)
 {
     /* Temporary storage for bignum */
@@ -63,15 +78,7 @@ int find_numbers(uint8_t *data, size_t len, size_t bits, uint8_t align, uint8_t 
         /* use mpz_import to convert from raw data*/
         /* Big endian : len bytes, MSB first, MSB first in each byte */
         mpz_import(n, bits/8, 1, 1, 1, 0, data+i);
-
-        /* Check if the number is not full of zeros */
-        if (mpz_sizeinbase(n, 2) > (bits-2) ) {
-            if (mpz_probab_prime_p(n, 20) > 0) {
-            printf("Prime of %zd bits found at offset 0x%zx : ", bits, i);
-            mpz_out_str(stdout, 16, n);
-            printf("\n");
-            }
-        }
+        number_checks(n, bits, i);
     }
     mpz_clear(n);
     
