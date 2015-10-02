@@ -10,6 +10,9 @@
 
 #include <gmp.h>
 
+extern void init_factorbase(size_t bits);
+extern int trial_div(mpz_t n);
+
 #define TRY_LITTLE_ENDIAN 1
 #define TRY_BIG_ENDIAN 2
 #define TRY_ALL_ENDIAN TRY_LITTLE_ENDIAN|TRY_BIG_ENDIAN
@@ -60,6 +63,16 @@ void number_checks(mpz_t n, size_t bits, size_t offset)
             printf("Prime of %zd bits found at offset 0x%zx : ", mpz_sizeinbase(n, 2), offset);
             mpz_out_str(stdout, 16, n);
             printf("\n");
+        } else {
+            /* Try to factor it !*/
+            if(trial_div(n) == 0) {
+                /* Trivial divisors found, return */
+                return;
+            }
+            printf("Potential modulus of %zd bits found at offset 0x%zx : ", mpz_sizeinbase(n, 2), offset);
+            mpz_out_str(stdout, 16, n);
+            printf("\n");
+
         }
     }
 
@@ -75,9 +88,16 @@ int find_numbers(uint8_t *data, size_t len, size_t bits, uint8_t align, uint8_t 
     mpz_init(n);
 
     for (i = 0; i <= (len-bits/8); i+= align) {
-        /* use mpz_import to convert from raw data*/
-        /* Big endian : len bytes, MSB first, MSB first in each byte */
+        /* use mpz_import to convert from raw data :
+         * (mpz_t rop, size_t count, int order, int size, int endian, 
+         *                              size_t nails, const void *op)
+         */
+
+        /* Big endian : len bytes, MSB first */
         mpz_import(n, bits/8, 1, 1, 1, 0, data+i);
+        number_checks(n, bits, i);
+        /* Little endian : len bytes, MSB first */
+        mpz_import(n, bits/8, -1, 1, 1, 0, data+i);
         number_checks(n, bits, i);
     }
     mpz_clear(n);
@@ -131,6 +151,7 @@ int main(int argc, char *argv[])
     }
     fclose(f); f = NULL;
 
+    init_factorbase(bits);
     printf("Trying to find %d bits crypto numbers\n", bits);
     find_numbers(data, data_len, bits, 1, 0);
 
